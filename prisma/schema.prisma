@@ -71,7 +71,7 @@ model ProjectIndex {
   project_title       String
   project_subtitle    String
   project_cover_img   String
-  project_tech_stacks String[]
+  project_tech_stacks String
   project_link        String
   github_link         String?
   project_status      String
