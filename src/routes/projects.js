@@ -1,8 +1,38 @@
 import express from "express"
 import { PrismaClient } from "@prisma/client"
+import multer from "multer"
+import { v4 as uuidv4 } from "uuid"
+import fs from "fs-extra"
+import path from "path"
+import dotenv from "dotenv"
+dotenv.config()
 
 const router = express.Router()
 const prisma = new PrismaClient()
+
+// Add this after your router declaration
+const API_URL = process.env.API_URL || "http://localhost:3000"
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), "public", "uploads")
+    fs.ensureDirSync(uploadDir) // Create directory if it doesn't exist
+    cb(null, uploadDir)
+  },
+  filename: (req, file, cb) => {
+    const filename = `${uuidv4()}-${file.originalname.replace(/\s/g, "_")}`
+    cb(null, filename)
+  },
+})
+
+// Create upload middleware with size limits
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+})
 
 // GET all projects (public)
 router.get("/", async (req, res) => {
@@ -15,8 +45,25 @@ router.get("/", async (req, res) => {
         team_members: true,
       },
     })
-    res.json(projects)
+
+    // Process the results to ensure consistent data types
+    const formattedProjects = projects.map((project) => {
+      return {
+        ...project,
+        project_tech_stacks:
+          typeof project.project_tech_stacks === "string"
+            ? JSON.parse(project.project_tech_stacks)
+            : project.project_tech_stacks,
+        technical_specifications:
+          typeof project.technical_specifications === "string"
+            ? JSON.parse(project.technical_specifications)
+            : project.technical_specifications,
+      }
+    })
+
+    res.json(formattedProjects)
   } catch (error) {
+    console.error("Error fetching projects:", error)
     res.status(500).json({ error: error.message })
   }
 })
@@ -40,7 +87,20 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Project not found" })
     }
 
-    res.json(project)
+    // Format the response
+    const formattedProject = {
+      ...project,
+      project_tech_stacks:
+        typeof project.project_tech_stacks === "string"
+          ? JSON.parse(project.project_tech_stacks)
+          : project.project_tech_stacks,
+      technical_specifications:
+        typeof project.technical_specifications === "string"
+          ? JSON.parse(project.technical_specifications)
+          : project.technical_specifications,
+    }
+
+    res.json(formattedProject)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
@@ -72,56 +132,60 @@ router.get("/by-project-id/:projectId", async (req, res) => {
 })
 
 // POST create new project (requires API key)
-router.post("/", async (req, res) => {
+router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const {
-      project_id,
-      project_title,
-      project_subtitle,
-      project_cover_img,
-      project_tech_stacks,
-      project_link,
-      project_status,
-      personal,
-      project_description,
-      technical_specifications,
-      project_features,
-      project_goals,
-      project_timeline,
-      team_members,
-    } = req.body
+    // Get project data from form or JSON
+    let projectData
+    if (req.file) {
+      // If multipart form data with image
+      projectData = JSON.parse(req.body.data)
+    } else {
+      // If JSON data without image
+      projectData = req.body
+    }
 
-    // Validate required fields
-    if (!project_id || !project_title) {
-      return res.status(400).json({ error: "project_id and project_title are required" })
+    // Handle image path if file was uploaded
+    let imagePath = projectData.project_cover_img || ""
+    if (req.file) {
+      // Change this line to include the full URL
+      imagePath = `${API_URL}/uploads/${req.file.filename}`
+    }
+
+    // Prepare data for database
+    const data = {
+      project_id: projectData.project_id,
+      project_title: projectData.project_title,
+      project_subtitle: projectData.project_subtitle,
+      project_cover_img: imagePath,
+      project_tech_stacks:
+        typeof projectData.project_tech_stacks === "string"
+          ? projectData.project_tech_stacks
+          : JSON.stringify(projectData.project_tech_stacks),
+      project_link: projectData.project_link,
+      project_status: projectData.project_status,
+      personal: projectData.personal,
+      project_description: projectData.project_description,
+      technical_specifications:
+        typeof projectData.technical_specifications === "string"
+          ? projectData.technical_specifications
+          : JSON.stringify(projectData.technical_specifications),
+      project_features: {
+        create: projectData.project_features || [],
+      },
+      project_goals: {
+        create: projectData.project_goals || [],
+      },
+      project_timeline: {
+        create: projectData.project_timeline || [],
+      },
+      team_members: {
+        create: projectData.team_members || [],
+      },
     }
 
     // Create project with nested relations
     const newProject = await prisma.project.create({
-      data: {
-        project_id,
-        project_title,
-        project_subtitle,
-        project_cover_img,
-        project_tech_stacks,
-        project_link,
-        project_status,
-        personal,
-        project_description,
-        technical_specifications,
-        project_features: {
-          create: project_features || [],
-        },
-        project_goals: {
-          create: project_goals || [],
-        },
-        project_timeline: {
-          create: project_timeline || [],
-        },
-        team_members: {
-          create: team_members || [],
-        },
-      },
+      data,
       include: {
         project_features: true,
         project_goals: true,
@@ -130,34 +194,30 @@ router.post("/", async (req, res) => {
       },
     })
 
-    res.status(201).json(newProject)
-  } catch (error) {
-    if (error.code === "P2002") {
-      return res.status(400).json({ error: "A project with this project_id already exists" })
+    // Format the response
+    const formattedProject = {
+      ...newProject,
+      project_tech_stacks:
+        typeof newProject.project_tech_stacks === "string"
+          ? JSON.parse(newProject.project_tech_stacks)
+          : newProject.project_tech_stacks,
+      technical_specifications:
+        typeof newProject.technical_specifications === "string"
+          ? JSON.parse(newProject.technical_specifications)
+          : newProject.technical_specifications,
     }
-    res.status(500).json({ error: error.message })
+
+    res.status(201).json(formattedProject)
+  } catch (error) {
+    console.error("Error creating project:", error)
+    res.status(500).json({ error: error.message || "Failed to create project" })
   }
 })
 
 // PUT update project (requires API key)
-router.put("/:id", async (req, res) => {
+router.put("/:id", upload.single("image"), async (req, res) => {
   try {
     const { id } = req.params
-    const {
-      project_title,
-      project_subtitle,
-      project_cover_img,
-      project_tech_stacks,
-      project_link,
-      project_status,
-      personal,
-      project_description,
-      technical_specifications,
-      project_features,
-      project_goals,
-      project_timeline,
-      team_members,
-    } = req.body
 
     // Check if project exists
     const existingProject = await prisma.project.findUnique({
@@ -168,66 +228,90 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ error: "Project not found" })
     }
 
+    // Get project data from form or JSON
+    let projectData
+    if (req.file) {
+      // If multipart form data with image
+      projectData = JSON.parse(req.body.data)
+    } else {
+      // If JSON data without image
+      projectData = req.body
+    }
+
+    // Handle image upload if provided
+    let imagePath = projectData.project_cover_img || existingProject.project_cover_img
+    if (req.file) {
+      // Change this line to include the full URL
+      imagePath = `${API_URL}/uploads/${req.file.filename}`
+
+      // When deleting old images, make sure to handle the full URL
+      if (existingProject.project_cover_img && existingProject.project_cover_img.includes("/uploads/")) {
+        try {
+          // Extract just the path part after the domain
+          const urlParts = existingProject.project_cover_img.split("/uploads/")
+          const filename = urlParts[1]
+          const oldFilePath = path.join(process.cwd(), "public", "uploads", filename)
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath)
+          }
+        } catch (err) {
+          console.error("Error deleting old image:", err)
+          // Continue even if delete fails
+        }
+      }
+    }
+
     // Update project with transaction to handle relations
     const updatedProject = await prisma.$transaction(async (tx) => {
-      // Delete existing relations if new ones are provided
-      if (project_features) {
-        await tx.projectFeature.deleteMany({
-          where: { projectId: id },
-        })
-      }
+      // Delete existing relations
+      await tx.projectFeature.deleteMany({
+        where: { projectId: id },
+      })
 
-      if (project_goals) {
-        await tx.projectGoal.deleteMany({
-          where: { projectId: id },
-        })
-      }
+      await tx.projectGoal.deleteMany({
+        where: { projectId: id },
+      })
 
-      if (project_timeline) {
-        await tx.projectTimeline.deleteMany({
-          where: { projectId: id },
-        })
-      }
+      await tx.projectTimeline.deleteMany({
+        where: { projectId: id },
+      })
 
-      if (team_members) {
-        await tx.teamMember.deleteMany({
-          where: { projectId: id },
-        })
-      }
+      await tx.teamMember.deleteMany({
+        where: { projectId: id },
+      })
 
       // Update the project and create new relations
       return tx.project.update({
         where: { id },
         data: {
-          project_title,
-          project_subtitle,
-          project_cover_img,
-          project_tech_stacks,
-          project_link,
-          project_status,
-          personal,
-          project_description,
-          technical_specifications,
-          project_features: project_features
-            ? {
-                create: project_features,
-              }
-            : undefined,
-          project_goals: project_goals
-            ? {
-                create: project_goals,
-              }
-            : undefined,
-          project_timeline: project_timeline
-            ? {
-                create: project_timeline,
-              }
-            : undefined,
-          team_members: team_members
-            ? {
-                create: team_members,
-              }
-            : undefined,
+          project_id: projectData.project_id,
+          project_title: projectData.project_title,
+          project_subtitle: projectData.project_subtitle,
+          project_cover_img: imagePath,
+          project_tech_stacks:
+            typeof projectData.project_tech_stacks === "string"
+              ? projectData.project_tech_stacks
+              : JSON.stringify(projectData.project_tech_stacks),
+          project_link: projectData.project_link,
+          project_status: projectData.project_status,
+          personal: projectData.personal,
+          project_description: projectData.project_description,
+          technical_specifications:
+            typeof projectData.technical_specifications === "string"
+              ? projectData.technical_specifications
+              : JSON.stringify(projectData.technical_specifications),
+          project_features: {
+            create: projectData.project_features || [],
+          },
+          project_goals: {
+            create: projectData.project_goals || [],
+          },
+          project_timeline: {
+            create: projectData.project_timeline || [],
+          },
+          team_members: {
+            create: projectData.team_members || [],
+          },
         },
         include: {
           project_features: true,
@@ -238,9 +322,23 @@ router.put("/:id", async (req, res) => {
       })
     })
 
-    res.json(updatedProject)
+    // Format the response
+    const formattedProject = {
+      ...updatedProject,
+      project_tech_stacks:
+        typeof updatedProject.project_tech_stacks === "string"
+          ? JSON.parse(updatedProject.project_tech_stacks)
+          : updatedProject.project_tech_stacks,
+      technical_specifications:
+        typeof updatedProject.technical_specifications === "string"
+          ? JSON.parse(updatedProject.technical_specifications)
+          : updatedProject.technical_specifications,
+    }
+
+    res.json(formattedProject)
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    console.error("Error updating project:", error)
+    res.status(500).json({ error: error.message || "Failed to update project" })
   }
 })
 
