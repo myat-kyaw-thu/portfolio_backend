@@ -79,3 +79,13 @@ model ProjectIndex {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
+
+model Achievement {
+  id          Int      @id @default(autoincrement())
+  title       String
+  type        String // Type of the achievement (e.g., Award, Project Milestone)
+  date        DateTime
+  description String
+  category    String
+  imageUrl    String?
+}

@@ -8,6 +8,7 @@ import path from "path"
 // Import routes
 import projectsRouter from "./routes/projects.js"
 import projectIndexRouter from "./routes/project-index.js"
+import achievementsRouter from "./routes/achievements.js"
 
 // Import middleware
 import apiKeyMiddleware from "./middleware/auth.js"
@@ -20,7 +21,7 @@ const prisma = new PrismaClient()
 
 // Initialize Express app
 const app = express()
-const PORT = process.env.PORT || 8000
+const PORT = process.env.PORT || 3000
 
 // Middleware
 app.use(cors())
@@ -34,6 +35,7 @@ app.use(apiKeyMiddleware)
 // Routes
 app.use("/api/projects", projectsRouter)
 app.use("/api/project-index", projectIndexRouter)
+app.use("/api/achievements", achievementsRouter)
 
 // Serve static files from the public directory
 app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")))
@@ -41,10 +43,11 @@ app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")
 // Root route
 app.get("/", (req, res) => {
   res.json({
-    message: "Portfolio Projects API",
+    message: "Portfolio API",
     endpoints: {
       projects: "/api/projects",
       projectIndex: "/api/project-index",
+      achievements: "/api/achievements",
     },
     authentication: "API key required for POST, PUT, DELETE operations",
   })
