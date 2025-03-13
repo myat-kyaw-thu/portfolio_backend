@@ -9,7 +9,6 @@
     "build": "prisma generate",
     "dev": "nodemon src/index.js",
     "vercel-build": "prisma generate",
-    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
