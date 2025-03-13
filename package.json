@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "build": "prisma generate",
+    "dev": "nodemon src/index.js",
     "vercel-build": "prisma generate",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
@@ -16,13 +17,16 @@
   },
   "dependencies": {
     "@prisma/client": "^5.4.2",
+    "cloudinary": "^2.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-fileupload": "^1.5.1",
     "express-rate-limit": "^7.5.0",
     "fs-extra": "^11.3.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "streamifier": "^0.1.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -30,6 +34,6 @@
     "prisma": "^5.4.2"
   },
   "bodyParserOptions": {
-  "limit": "20mb"
-}
+    "limit": "20mb"
+  }
 }

@@ -1,30 +1,35 @@
 import express from "express"
 import { PrismaClient } from "@prisma/client"
 import multer from "multer"
-import { v4 as uuidv4 } from "uuid"
-import fs from "fs-extra"
-import path from "path"
 import dotenv from "dotenv"
+import { v2 as cloudinary } from "cloudinary"
+import streamifier from "streamifier"
 dotenv.config()
 
 const router = express.Router()
 const prisma = new PrismaClient()
 
-// Add this after your router declaration
-const API_URL = "http://localhost:8000"
+// Parse the Cloudinary URL from environment variable
+const cloudinaryUrl = process.env.CLOUDINARY_URL || ""
+// The URL format is: cloudinary://<api_key>:<api_secret>@<cloud_name>
+const cloudinaryUrlRegex = /cloudinary:\/\/([^:]+):([^@]+)@(.+)/
+const match = cloudinaryUrl.match(cloudinaryUrlRegex)
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), "public", "uploads")
-    fs.ensureDirSync(uploadDir) // Create directory if it doesn't exist
-    cb(null, uploadDir)
-  },
-  filename: (req, file, cb) => {
-    const filename = `${uuidv4()}-${file.originalname.replace(/\s/g, "_")}`
-    cb(null, filename)
-  },
-})
+if (match) {
+  const [, api_key, api_secret, cloud_name] = match
+
+  // Configure Cloudinary
+  cloudinary.config({
+    cloud_name,
+    api_key,
+    api_secret,
+  })
+} else {
+  console.error("Invalid CLOUDINARY_URL format. Please check your environment variables.")
+}
+
+// Configure multer for memory storage (not disk storage)
+const storage = multer.memoryStorage()
 
 // Create upload middleware with size limits
 const upload = multer({
@@ -33,6 +38,24 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
 })
+
+// Helper function to upload to Cloudinary
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "project_covers",
+        resource_type: "auto",
+      },
+      (error, result) => {
+        if (error) return reject(error)
+        resolve(result)
+      },
+    )
+
+    streamifier.createReadStream(buffer).pipe(uploadStream)
+  })
+}
 
 // GET all project indexes (public)
 router.get("/", async (req, res) => {
@@ -127,11 +150,18 @@ router.post("/", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "project_id and project_title are required" })
     }
 
-    // Handle image path if file was uploaded
+    // Handle image upload if file was provided
     let imagePath = projectData.project_cover_img || ""
     if (req.file) {
-      // Change this line to include the full URL
-      imagePath = `${API_URL}/uploads/${req.file.filename}`
+      try {
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(req.file.buffer)
+        // Store the secure URL
+        imagePath = result.secure_url
+      } catch (uploadError) {
+        console.error("Cloudinary upload error:", uploadError)
+        return res.status(500).json({ error: "Failed to upload image" })
+      }
     }
 
     // Create project index
@@ -195,23 +225,17 @@ router.put("/:id", upload.single("image"), async (req, res) => {
     // Handle image upload if provided
     let imagePath = projectData.project_cover_img || existingProjectIndex.project_cover_img
     if (req.file) {
-      // Change this line to include the full URL
-      imagePath = `${API_URL}/uploads/${req.file.filename}`
+      try {
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(req.file.buffer)
+        // Store the secure URL
+        imagePath = result.secure_url
 
-      // When deleting old images, make sure to handle the full URL
-      if (existingProjectIndex.project_cover_img && existingProjectIndex.project_cover_img.includes("/uploads/")) {
-        try {
-          // Extract just the path part after the domain
-          const urlParts = existingProjectIndex.project_cover_img.split("/uploads/")
-          const filename = urlParts[1]
-          const oldFilePath = path.join(process.cwd(), "public", "uploads", filename)
-          if (fs.existsSync(oldFilePath)) {
-            fs.unlinkSync(oldFilePath)
-          }
-        } catch (err) {
-          console.error("Error deleting old image:", err)
-          // Continue even if delete fails
-        }
+        // Note: We don't need to delete old images from Cloudinary for this implementation
+        // If you want to delete old images, you would need to store the public_id in your database
+      } catch (uploadError) {
+        console.error("Cloudinary upload error:", uploadError)
+        return res.status(500).json({ error: "Failed to upload image" })
       }
     }
 
@@ -274,4 +298,3 @@ router.delete("/:id", async (req, res) => {
 })
 
 export default router
-
