@@ -11,5 +11,6 @@
       "src": "/(.*)",
       "dest": "src/index.js"
     }
-  ]
+  ],
+  "ignoreCommand": "echo 'Skipping auto deploy' && exit 1"
 }
