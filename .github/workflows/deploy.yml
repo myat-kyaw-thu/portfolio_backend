@@ -1,0 +1,12 @@
+name: Manual Deploy to Vercel
+
+on:
+  workflow_dispatch:  # Allows manual run from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Vercel Deploy
+        run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
