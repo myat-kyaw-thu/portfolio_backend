@@ -9,83 +9,94 @@ datasource db {
 
 model Project {
   id                       String            @id @default(uuid())
-  project_id               String            @unique
-  project_title            String
-  project_subtitle         String
-  project_cover_img        String
-  project_tech_stacks      String // Stored as JSON string
-  project_link             String
-  project_status           String
-  personal                 Boolean
-  project_description      String
-  technical_specifications String // Stored as JSON string
-  project_features         ProjectFeature[]
-  project_goals            ProjectGoal[]
-  project_timeline         ProjectTimeline[]
-  team_members             TeamMember[]
+  project_id               String?           @unique
+  project_title            String?
+  project_subtitle         String?
+  project_cover_img        String?
+  project_tech_stacks      String? // Stored as JSON string
+  project_link             String?
+  project_status           String?
+  personal                 Boolean?
+  project_description      String?
+  technical_specifications String? // Stored as JSON string
+  is_details               Boolean?          // New field to indicate if details are linked
+  project_features         ProjectFeature[]  // This should be a required relation list
+  project_goals            ProjectGoal[]     // This should be a required relation list
+  project_timeline         ProjectTimeline[] // This should be a required relation list
+  team_members             TeamMember[]      // This should be a required relation list
+  projectDetail            ProjectDetail?    // One-to-one relation, nullable
   createdAt                DateTime          @default(now())
   updatedAt                DateTime          @updatedAt
 }
 
+model ProjectDetail {
+  id                String   @id @default(uuid())
+  project_images    String?  // Stored as JSON string array
+  project_flowchart String?  // Stored as JSON object with mermaid_code and description
+  project           Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId         String?  @unique // This ensures one-to-one relationship
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 model ProjectFeature {
   id                  Int     @id @default(autoincrement())
-  feature_id          Int
-  feature_name        String
-  feature_description String
+  feature_id          Int?
+  feature_name        String?
+  feature_description String?
   project             Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId           String
 }
 
 model ProjectGoal {
   id               Int     @id @default(autoincrement())
-  goal_id          Int
-  goal_name        String
-  goal_description String
+  goal_id          Int?
+  goal_name        String?
+  goal_description String?
   project          Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId        String
 }
 
 model ProjectTimeline {
   id                    Int     @id @default(autoincrement())
-  milestone_id          Int
-  milestone_name        String
-  milestone_date        String
-  milestone_description String
+  milestone_id          Int?
+  milestone_name        String?
+  milestone_date        String?
+  milestone_description String?
   project               Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId             String
 }
 
 model TeamMember {
   id          Int     @id @default(autoincrement())
-  member_id   Int
-  member_name String
-  member_role String
+  member_id   Int?
+  member_name String?
+  member_role String?
   project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId   String
 }
 
-// New model for the simplified project index
 model ProjectIndex {
   id                  String   @id @default(uuid())
-  project_id          String   @unique
-  project_title       String
-  project_subtitle    String
-  project_cover_img   String
-  project_tech_stacks String
-  project_link        String
+  project_id          String?   @unique
+  project_title       String?
+  project_subtitle    String?
+  project_cover_img   String?
+  project_tech_stacks String?
+  project_link        String?
   github_link         String?
-  project_status      String
-  personal            Boolean
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  project_status      String?
+  personal            Boolean?
+  createdAt           DateTime? @default(now())
+  updatedAt           DateTime? @updatedAt
 }
 
 model Achievement {
   id          Int      @id @default(autoincrement())
-  title       String
-  type        String // Type of the achievement (e.g., Award, Project Milestone)
-  date        DateTime
-  description String
-  category    String
+  title       String?
+  type        String? // Type of the achievement (e.g., Award, Project Milestone)
+  date        DateTime?
+  description String?
+  category    String?
   imageUrl    String?
 }
