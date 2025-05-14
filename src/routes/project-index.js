@@ -1,8 +1,8 @@
-import express from "express"
 import { PrismaClient } from "@prisma/client"
-import multer from "multer"
-import dotenv from "dotenv"
 import { v2 as cloudinary } from "cloudinary"
+import dotenv from "dotenv"
+import express from "express"
+import multer from "multer"
 import streamifier from "streamifier"
 dotenv.config()
 

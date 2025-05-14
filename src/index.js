@@ -6,7 +6,7 @@ import { PrismaClient } from "@prisma/client"
 import path from "path"
 
 // Import routes
-import projectsRouter from "./routes/projects.js"
+import projectsRouter from "./routes/__projects.js"
 import projectIndexRouter from "./routes/project-index.js"
 import achievementsRouter from "./routes/achievements.js"
 
@@ -70,6 +70,3 @@ process.on("SIGINT", async () => {
 
 // Export for Vercel serverless deployment
 export default app
-
-
-
