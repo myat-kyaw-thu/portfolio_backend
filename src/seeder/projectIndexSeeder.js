@@ -9,7 +9,8 @@ async function main() {
       project_title: 'Aesthetic Portfolio',
       project_subtitle: 'I developed a professional portfolio website for Po Po Thae Khine, a recent accounting graduate, to showcase her qualifications and expertise. The site features sections on her education, certifications (including HSK 2 and NLA FAA Levels 1 & 2), skills in critical thinking and wealth management, and practical experience as a Financial Assistant. It also provides contact information and options to download her CV, effectively presenting her credentials to potential employers.',
       project_cover_img: '/uploads/random-cover1.png',
-      project_tech_stacks: ['TypeScript', 'ShadcnUi', 'Next.js', 'React', 'Framer-Motion', 'GSAP'],
+      // Join the tech stacks into a single string
+      project_tech_stacks: ['TypeScript', 'ShadcnUi', 'Next.js', 'React', 'Framer-Motion', 'GSAP'].join(', '),
       project_link: 'https://popothaekhine.vercel.app/',
       github_link: 'https://github.com/PrimeBeyonder/Popo',
       project_status: 'Completed',
@@ -22,7 +23,8 @@ async function main() {
       project_title: 'BookBorrow App',
       project_subtitle: 'A modern library management system with AI-powered recommendations.',
       project_cover_img: '/uploads/bookborrow-cover.png',
-      project_tech_stacks: ['TypeScript', 'Next.js', 'Bun', 'Prisma', 'PostgreSQL', 'Redis', 'Stripe', 'Resend', 'Shadcn UI', 'TailwindCSS', 'Zod', 'Framer Motion'],
+      // Join the tech stacks into a single string
+      project_tech_stacks: ['TypeScript', 'Next.js', 'Bun', 'Prisma', 'PostgreSQL', 'Redis', 'Stripe', 'Resend', 'Shadcn UI', 'TailwindCSS', 'Zod', 'Framer Motion'].join(', '),
       project_link: 'https://github.com/PrimeBeyonder/full_stack_bookBorrow_app',
       github_link: 'https://github.com/PrimeBeyonder/full_stack_bookBorrow_app',
       project_status: 'In Progress',
@@ -35,7 +37,8 @@ async function main() {
       project_title: 'Zentry Clone',
       project_subtitle: 'A clone of Zentry.com to practice advanced UI interactions.',
       project_cover_img: '/uploads/zentry-clone-cover.png',
-      project_tech_stacks: ['React.js', 'GSAP', 'TailwindCSS', 'JavaScript'],
+      // Join the tech stacks into a single string
+      project_tech_stacks: ['React.js', 'GSAP', 'TailwindCSS', 'JavaScript'].join(', '),
       project_link: 'https://github.com/PrimeBeyonder/zentry__',
       github_link: 'https://github.com/PrimeBeyonder/zentry__',
       project_status: 'Completed',
@@ -45,8 +48,9 @@ async function main() {
     },
   ];
 
+  // Iterate through the projects and insert them into the database
   for (const project of projects) {
-    await prisma.ProjectIndex.create({
+    await prisma.projectIndex.create({
       data: project,
     });
   }

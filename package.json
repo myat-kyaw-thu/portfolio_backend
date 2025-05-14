@@ -12,7 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:Indexseed": "node src/seeder/projectIndexSeeder.js"
+    "prisma:Indexseed": "node src/seeder/projectIndexSeeder.js",
+    "prisma:Detailseed": "node src/seeder/projectDetailSeeder.js"
   },
   "dependencies": {
     "@prisma/client": "^5.4.2",
