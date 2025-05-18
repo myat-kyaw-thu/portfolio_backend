@@ -1,25 +1,18 @@
-import express from "express"
-import cors from "cors"
-import morgan from "morgan"
-import dotenv from "dotenv"
 import { PrismaClient } from "@prisma/client"
+import cors from "cors"
+import dotenv from "dotenv"
+import express from "express"
+import morgan from "morgan"
 import path from "path"
 
 // Import routes
-import projectsRouter from "./routes/__projects.js"
-import projectIndexRouter from "./routes/project-index.js"
-import achievementsRouter from "./routes/achievements.js"
-
-// Import middleware
 import apiKeyMiddleware from "./middleware/auth.js"
+import achievementsRouter from "./routes/achievements.js"
+import projectDetailsRouter from "./routes/project-detail.js"
+import projectIndexRouter from "./routes/project-index.js"
 
-// Initialize environment variables
 dotenv.config()
-
-// Initialize Prisma client with connection pooling for serverless
 const prisma = new PrismaClient()
-
-// Initialize Express app
 const app = express()
 const PORT = process.env.PORT || 8000
 
@@ -28,18 +21,18 @@ app.use(cors())
 app.use(express.json({ limit: "50mb" }))
 app.use(express.urlencoded({ extended: true, limit: "50mb" }))
 
-// Only use morgan in development
+
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"))
 }
 
-// Apply API key authentication middleware globally
 app.use(apiKeyMiddleware)
 
 // Routes
-app.use("/api/projects", projectsRouter)
+app.use("/api/projects", projectDetailsRouter)
 app.use("/api/project-index", projectIndexRouter)
 app.use("/api/achievements", achievementsRouter)
+
 
 // Note: Static file serving won't work on Vercel serverless
 // This will only work in local development
