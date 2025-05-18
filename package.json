@@ -1,5 +1,5 @@
 {
-  "name": "express-prisma-backend",
+  "name": "portfolio-backend",
   "version": "1.0.0",
   "description": "Backend API with Express.js, Prisma and API key authentication",
   "main": "src/index.js",
