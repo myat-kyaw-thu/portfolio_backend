@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { PrismaClient } from "@prisma/client"
+const prisma = new PrismaClient()
 
 async function main() {
   // Project data array - contains both project details
