@@ -1,8 +1,9 @@
-const express = require("express")
-const { PrismaClient } = require("@prisma/client")
-const multer = require("multer")
-const cloudinary = require("cloudinary").v2
-const streamifier = require("streamifier")
+import { PrismaClient } from "@prisma/client";
+import { v2 as cloudinary } from "cloudinary";
+import express from "express";
+import multer from "multer";
+import streamifier from "streamifier";
+
 
 const router = express.Router()
 const prisma = new PrismaClient()
@@ -59,8 +60,7 @@ const uploadToCloudinary = (buffer) => {
 router.get("/:project_id", async (req, res) => {
   try {
     const { project_id } = req.params
-
-    // Find the project first
+    // Find the project with all related data EXCEPT project_timeline
     const project = await prisma.project.findUnique({
       where: { project_id },
       include: {
@@ -68,6 +68,7 @@ router.get("/:project_id", async (req, res) => {
         project_features: true,
         project_goals: true,
         team_members: true,
+        // Removed project_timeline from include
       },
     })
 
@@ -75,27 +76,64 @@ router.get("/:project_id", async (req, res) => {
       return res.status(404).json({ error: "Project not found" })
     }
 
-    // Parse JSON strings into objects
-    const response = {
+    // Check if project details exist
+    if (!project.projectDetail) {
+      return res.status(404).json({ error: "Project details not found" })
+    }
+
+    // Log the raw project detail data for debugging
+    console.log("Raw project detail data:", project.projectDetail)
+
+    // Parse project images and flowchart
+    let projectImages = []
+    let projectFlowchart = { mermaid_code: "", description: "" }
+
+    try {
+      projectImages = JSON.parse(project.projectDetail.project_images)
+    } catch (error) {
+      console.error("Error parsing project images:", error)
+    }
+
+    try {
+      projectFlowchart = JSON.parse(project.projectDetail.project_flowchart)
+    } catch (error) {
+      console.error("Error parsing project flowchart:", error)
+      console.log("Raw flowchart data:", project.projectDetail.project_flowchart)
+    }
+
+    // Format the response to match the exact JSON structure requested
+    const formattedResponse = {
       project_id: project.project_id,
       project_title: project.project_title,
       project_subtitle: project.project_subtitle,
+      project_images: projectImages,
       project_tech_stacks: JSON.parse(project.project_tech_stacks),
       project_link: project.project_link,
       project_status: project.project_status,
       personal: project.personal,
       project_description: project.project_description,
-      technical_specifications: JSON.parse(project.technical_specifications),
+
+      // Format project features to remove database-specific fields
       project_features: project.project_features.map((feature) => ({
         feature_id: feature.feature_id,
         feature_name: feature.feature_name,
         feature_description: feature.feature_description,
       })),
+
+      // Parse technical specifications
+      technical_specifications: JSON.parse(project.technical_specifications),
+
+      // Format project goals to remove database-specific fields
       project_goals: project.project_goals.map((goal) => ({
         goal_id: goal.goal_id,
         goal_name: goal.goal_name,
         goal_description: goal.goal_description,
       })),
+
+      // Add project flowchart
+      project_flowchart: projectFlowchart,
+
+      // Format team members to remove database-specific fields
       team_members: project.team_members.map((member) => ({
         member_id: member.member_id,
         member_name: member.member_name,
@@ -103,26 +141,14 @@ router.get("/:project_id", async (req, res) => {
       })),
     }
 
-    // Add project details if they exist
-    if (project.projectDetail) {
-      const projectFlowchart = JSON.parse(project.projectDetail.project_flowchart)
-      response.project_images = JSON.parse(project.projectDetail.project_images)
-      response.project_flowchart = {
-        mermaid_code: projectFlowchart.mermaid_code,
-        description: projectFlowchart.description,
-      }
-    } else {
-      response.project_images = []
-      response.project_flowchart = {
-        mermaid_code: "",
-        description: "",
-      }
-    }
-
-    return res.status(200).json(response)
+    return res.status(200).json(formattedResponse)
   } catch (error) {
     console.error("Error fetching project details:", error)
-    return res.status(500).json({ error: "Failed to fetch project details" })
+    return res.status(500).json({
+      error: "Failed to fetch project details",
+      details: error.message,
+      stack: error.stack,
+    })
   }
 })
 
@@ -150,7 +176,12 @@ router.post("/:project_id", upload.array("images", 10), async (req, res) => {
       imageUrls = uploadResults.map((result) => result.secure_url)
     } else if (project.projectDetail) {
       // Keep existing images if no new ones are uploaded
-      imageUrls = JSON.parse(project.projectDetail.project_images)
+      try {
+        imageUrls = JSON.parse(project.projectDetail.project_images)
+      } catch (error) {
+        console.error("Error parsing existing images:", error)
+        imageUrls = []
+      }
     }
 
     // Prepare project flowchart data
@@ -158,6 +189,8 @@ router.post("/:project_id", upload.array("images", 10), async (req, res) => {
       mermaid_code: flowchart_code || "",
       description: flowchart_description || "",
     }
+
+    console.log("Saving flowchart:", projectFlowchart)
 
     // Create or update project details
     let projectDetail
@@ -189,51 +222,26 @@ router.post("/:project_id", upload.array("images", 10), async (req, res) => {
       })
     }
 
-    return res.status(200).json({
+    // Parse the saved data to verify it was stored correctly
+    const savedImages = JSON.parse(projectDetail.project_images)
+    const savedFlowchart = JSON.parse(projectDetail.project_flowchart)
+
+    // Format the response to match the requested structure
+    const formattedResponse = {
       message: "Project details saved successfully",
-      projectDetail: {
-        ...projectDetail,
-        project_images: JSON.parse(projectDetail.project_images),
-        project_flowchart: JSON.parse(projectDetail.project_flowchart),
-      },
-    })
-  } catch (error) {
-    console.error("Error saving project details:", error)
-    return res.status(500).json({ error: "Failed to save project details" })
-  }
-})
-
-// Delete project details
-router.delete("/:project_id", async (req, res) => {
-  try {
-    const { project_id } = req.params
-
-    // Find the project
-    const project = await prisma.project.findUnique({
-      where: { project_id },
-      include: { projectDetail: true },
-    })
-
-    if (!project || !project.projectDetail) {
-      return res.status(404).json({ error: "Project details not found" })
+      project_images: savedImages,
+      project_flowchart: savedFlowchart,
     }
 
-    // Delete the project details
-    await prisma.projectDetail.delete({
-      where: { id: project.projectDetail.id },
-    })
-
-    // Update the project to set is_details to null or false
-    await prisma.project.update({
-      where: { id: project.id },
-      data: { is_details: false },
-    })
-
-    return res.status(200).json({ message: "Project details deleted successfully" })
+    return res.status(200).json(formattedResponse)
   } catch (error) {
-    console.error("Error deleting project details:", error)
-    return res.status(500).json({ error: "Failed to delete project details" })
+    console.error("Error saving project details:", error)
+    return res.status(500).json({
+      error: "Failed to save project details",
+      details: error.message,
+      stack: error.stack,
+    })
   }
 })
 
-module.exports = router
+export default router
