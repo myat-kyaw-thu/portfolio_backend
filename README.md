@@ -1,57 +1,96 @@
+# Express Prisma Backend
 
-# Express.js Backend with Prisma and API Key Authentication
+A robust backend API built with Express.js and Prisma for portfolio management, featuring API key authentication, file uploads, and comprehensive project management capabilities.
 
-A RESTful API built with Express.js, Prisma ORM, and PostgreSQL (Neon DB).
+## 🚀 Features
 
-## Features
+- **RESTful API** with Express.js
+- **Database ORM** with Prisma
+- **API Key Authentication** for secure access
+- **File Upload Support** with Cloudinary integration
+- **Rate Limiting** for API protection
+- **CORS Support** for cross-origin requests
+- **Request Logging** with Morgan
+- **Project Management** with seeding capabilities
+- **Development Tools** with hot reload
 
-- Express.js server
-- Prisma ORM for database operations
-- API key authentication for write operations
-- Public read-only access
-- PostgreSQL database (Neon DB compatible)
+## 📋 Prerequisites
 
-## Setup
+Before running this project, make sure you have:
 
-1. Install dependencies:
+- Node.js (v16 or higher)
+- npm or yarn
+- A database (PostgreSQL, MySQL, or SQLite)
+- Cloudinary account (for file uploads)
+
+## 🛠️ Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/myat-kyaw-thu/portfolio_backend
+   cd express-prisma-backend
    ```
+
+2. **Install dependencies**
+   ```bash
    npm install
    ```
 
-2. Configure environment variables:
-   - Copy `.env.example` to `.env` (already done)
-   - Update the `DATABASE_URL` with your Neon DB connection string
-
-3. Initialize Prisma:
+3. **Set up environment variables**
+   Create a `.env` file in the root directory:
+   ```env
+   # Database
+   DATABASE_URL="your-database-connection-string"
+   
+   # API Configuration
+   API_KEY="your-api-key"
+   PORT=3000
+   
+   # Cloudinary Configuration
+   CLOUDINARY_CLOUD_NAME="your-cloud-name"
+   CLOUDINARY_API_KEY="your-api-key"
+   CLOUDINARY_API_SECRET="your-api-secret"
+   
+   # CORS Origins (optional)
+   ALLOWED_ORIGINS="http://localhost:3000,https://yourdomain.com"
    ```
+
+4. **Set up the database**
+   ```bash
+   # Generate Prisma client
    npm run prisma:generate
+   
+   # Run database migrations
    npm run prisma:migrate
    ```
 
-4. Start the server:
-   ```
-   npm run dev
-   ```
 
-## API Authentication
+## 📦 Dependencies
 
-- GET requests are public and don't require authentication
-- POST, PUT, DELETE requests require an API key in the `x-api-key` header
-- The API key is stored in the `.env` file as `APP_KEY`
+### Core Dependencies
+- **express** - Web framework
+- **@prisma/client** - Database ORM client
+- **prisma** - Database toolkit
+- **dotenv** - Environment variable management
 
-## API Endpoints
+### File Handling
+- **cloudinary** - Cloud-based image and video management
+- **multer** - File upload middleware
+- **express-fileupload** - File upload handling
+- **streamifier** - Stream utilities
+- **fs-extra** - Enhanced file system operations
 
-- GET /api/items - Get all items
-- GET /api/items/:id - Get item by ID
-- POST /api/items - Create new item (requires API key)
-- PUT /api/items/:id - Update item (requires API key)
-- DELETE /api/items/:id - Delete item (requires API key)
+### Security & Utilities
+- **cors** - Cross-origin resource sharing
+- **express-rate-limit** - Rate limiting middleware
+- **morgan** - HTTP request logger
+- **axios** - HTTP client
+- **uuid** - Unique identifier generation
 
-## Example Request with API Key
+---
 
+**Version:** 1.0.0  
+**Node.js:** v16+ required  
+**Database:** Prisma compatible databases
 ```
-curl -X POST http://localhost:3000/api/items \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_API_KEY" \
-  -d '{"title": "New Item", "description": "Description"}'
-```
+
